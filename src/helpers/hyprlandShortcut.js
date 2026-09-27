@@ -14,7 +14,10 @@ const SLOT_TOGGLE_METHOD = {
   meeting: "ToggleMeeting",
   voiceAgent: "ToggleVoiceAgent",
   translation: "ToggleTranslation",
+  cancel: "Cancel",
 };
+
+const EPHEMERAL_SLOTS = new Set(["cancel"]);
 
 // Map Electron modifier names to Hyprland modifier names
 const ELECTRON_TO_HYPRLAND_MOD = {
@@ -713,10 +716,13 @@ class HyprlandShortcutManager {
             "{ release = true, transparent = true }"
           )
         : `bindrt = ${converted.bindKey}, exec, ${releaseCommand}`;
-    const nextDesiredBinds = {
-      ...this.desiredBinds,
-      [slotName]: { press: persistedPressBind, release: persistedReleaseBind },
-    };
+    const isEphemeral = EPHEMERAL_SLOTS.has(slotName);
+    const nextDesiredBinds = isEphemeral
+      ? this.desiredBinds
+      : {
+          ...this.desiredBinds,
+          [slotName]: { press: persistedPressBind, release: persistedReleaseBind },
+        };
     try {
       try {
         this._unbindRuntime(config, runtimeBinding);
@@ -754,16 +760,18 @@ class HyprlandShortcutManager {
     this.bindingPtt[slotName] = isPtt;
     this.isRegistered = true;
     if (typeof callback === "function") this.callbacks[slotName] = callback;
-    this.desiredBinds = nextDesiredBinds;
-    this.persistencePending = true;
-    try {
-      this._persistBinds(config, nextDesiredBinds);
-      this.persistencePending = false;
-    } catch (err) {
-      debugLogger.log(
-        `[HyprlandShortcut] Keybinding "${hotkey}" is active for this session but will not persist:`,
-        err.message
-      );
+    if (!isEphemeral) {
+      this.desiredBinds = nextDesiredBinds;
+      this.persistencePending = true;
+      try {
+        this._persistBinds(config, nextDesiredBinds);
+        this.persistencePending = false;
+      } catch (err) {
+        debugLogger.log(
+          `[HyprlandShortcut] Keybinding "${hotkey}" is active for this session but will not persist:`,
+          err.message
+        );
+      }
     }
     debugLogger.log(
       `[HyprlandShortcut] Keybinding "${hotkey}" (${runtimeBinding}) registered for slot "${slotName}"`
@@ -808,18 +816,20 @@ class HyprlandShortcutManager {
       return false;
     }
 
-    const nextDesiredBinds = { ...this.desiredBinds };
-    delete nextDesiredBinds[slotName];
-    this.desiredBinds = nextDesiredBinds;
-    this.persistencePending = true;
-    try {
-      this._persistBinds(config, nextDesiredBinds);
-      this.persistencePending = false;
-    } catch (err) {
-      debugLogger.log(
-        `[HyprlandShortcut] Runtime binding "${slotName}" removed but config was unchanged:`,
-        err.message
-      );
+    if (!EPHEMERAL_SLOTS.has(slotName)) {
+      const nextDesiredBinds = { ...this.desiredBinds };
+      delete nextDesiredBinds[slotName];
+      this.desiredBinds = nextDesiredBinds;
+      this.persistencePending = true;
+      try {
+        this._persistBinds(config, nextDesiredBinds);
+        this.persistencePending = false;
+      } catch (err) {
+        debugLogger.log(
+          `[HyprlandShortcut] Runtime binding "${slotName}" removed but config was unchanged:`,
+          err.message
+        );
+      }
     }
 
     delete this.bindings[slotName];
