@@ -18,6 +18,8 @@ const DEFAULT_HOTKEY = "Control+Super";
 
 // Dictation has a dedicated native path because it also supports push-to-talk.
 const LINUX_NATIVE_TAP_SLOTS = new Set(["meeting", "voiceAgent", "translation"]);
+// Hyprland routes the recording-only Escape bind through its native backend.
+const HYPRLAND_NATIVE_TAP_SLOTS = new Set([...LINUX_NATIVE_TAP_SLOTS, "cancel"]);
 
 // KDE registration failure reasons — reuse existing i18n keys
 const KDE_FAILURE_REASONS = {
@@ -309,7 +311,7 @@ class HotkeyManager extends EventEmitter {
       return { success: true, hotkey };
     }
 
-    if (LINUX_NATIVE_TAP_SLOTS.has(slotName) && this.useHyprland && this.hyprlandManager) {
+    if (HYPRLAND_NATIVE_TAP_SLOTS.has(slotName) && this.useHyprland && this.hyprlandManager) {
       const conflict = this._findSlotConflict(slotName, hotkey);
       if (conflict) return conflict;
 
@@ -376,7 +378,7 @@ class HotkeyManager extends EventEmitter {
       return;
     }
 
-    if (this.useHyprland && this.hyprlandManager && LINUX_NATIVE_TAP_SLOTS.has(slotName)) {
+    if (this.useHyprland && this.hyprlandManager && HYPRLAND_NATIVE_TAP_SLOTS.has(slotName)) {
       return this.hyprlandManager
         .unregisterKeybinding(slotName)
         .then((success) => {

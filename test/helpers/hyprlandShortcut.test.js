@@ -96,8 +96,10 @@ test("exports every Hyprland D-Bus toggle", async () => {
     manager.callbacks.meeting = () => calls.push("meeting");
     manager.callbacks.voiceAgent = () => calls.push("voiceAgent");
     manager.callbacks.translation = () => calls.push("translation");
+    manager.callbacks.cancel = () => calls.push("cancel");
 
     assert.deepEqual(Object.keys(exported.iface.methods).sort(), [
+      "Cancel",
       "PttDown",
       "PttUp",
       "Toggle",
@@ -109,7 +111,8 @@ test("exports every Hyprland D-Bus toggle", async () => {
     exported.methods.ToggleMeeting();
     exported.methods.ToggleVoiceAgent();
     exported.methods.ToggleTranslation();
-    assert.deepEqual(calls, ["dictation", "meeting", "voiceAgent", "translation"]);
+    exported.methods.Cancel();
+    assert.deepEqual(calls, ["dictation", "meeting", "voiceAgent", "translation", "cancel"]);
   });
 });
 
@@ -754,6 +757,30 @@ test(
     assert.equal(await teardown, true);
     assert.equal(manager.bindings.voiceAgent, undefined);
     assert.equal(manager.bindings.translation, undefined);
+  })
+);
+
+test(
+  "keeps the temporary cancel bind out of persistent Hyprland config",
+  withTempHyprConfig(async (configDir) => {
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, "hyprland.conf"), "# config\n");
+    const hyprctl = successfulHyprctl("hyprlang");
+    const HyprlandShortcutManager = loadManager(hyprctl.execFileSync);
+    const manager = new HyprlandShortcutManager();
+
+    assert.equal(await manager.registerKeybinding("Control+Shift+Enter"), true);
+    const beforeCancel = readBinds(configDir);
+    assert.equal(await manager.registerSlotKeybinding("Escape", "cancel", () => {}), true);
+    assert.equal(readBinds(configDir), beforeCancel);
+    assert.ok(
+      hyprctl.calls.some(
+        ({ args }) => args[0] === "keyword" && args[2]?.includes("com.openwhispr.App.Cancel")
+      )
+    );
+
+    assert.equal(await manager.unregisterKeybinding("cancel"), true);
+    assert.equal(readBinds(configDir), beforeCancel);
   })
 );
 

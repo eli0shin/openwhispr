@@ -45,6 +45,32 @@ async function withHyprland(fn) {
   }
 }
 
+hyprlandTest("Hyprland routes the temporary cancel slot through its native backend", async () => {
+  await withHyprland(async () => {
+    const calls = [];
+    const callback = () => {};
+    const manager = new HotkeyManager();
+    manager.useHyprland = true;
+    manager.hyprlandManager = {
+      async registerSlotKeybinding(...args) {
+        calls.push(args);
+        return true;
+      },
+      async unregisterKeybinding(slotName) {
+        calls.push(["unregister", slotName]);
+        return true;
+      },
+    };
+
+    assert.equal((await manager.registerSlot("cancel", "Escape", callback)).success, true);
+    assert.deepEqual(calls, [["Escape", "cancel", callback]]);
+    assert.equal(registered.size, 0);
+
+    assert.equal(await manager.unregisterSlot("cancel"), true);
+    assert.deepEqual(calls.at(-1), ["unregister", "cancel"]);
+  });
+});
+
 hyprlandTest("Hyprland optional slots do not fall back when registration fails", async () => {
   await withHyprland(async () => {
     const calls = [];
