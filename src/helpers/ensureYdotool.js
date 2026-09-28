@@ -87,8 +87,17 @@ function userInInputGroup() {
 async function ensureYdotool() {
   if (process.platform !== "linux") return;
 
-  const sessionType = (process.env.XDG_SESSION_TYPE || "").toLowerCase();
-  if (sessionType !== "wayland" && !process.env.WAYLAND_DISPLAY) return;
+  const { isWayland, isWlroots, isHyprland, desktopEnv } = getLinuxSessionInfo();
+  if (!isWayland) return;
+
+  // Hyprland pastes with wtype (even without an instance signature), or its
+  // shortcut dispatcher. Do not require permissions for an optional fallback.
+  if (
+    ((isHyprland || desktopEnv.includes("hyprland")) && isWlroots && commandExists("wtype")) ||
+    (isHyprland && commandExists("hyprctl"))
+  ) {
+    return;
+  }
 
   const log = getLogger();
 
