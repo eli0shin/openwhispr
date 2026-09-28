@@ -2,7 +2,7 @@
   "appId": "com.gizmolabs.openwhispr",
   "afterPack": "scripts/afterPack.js",
   "extraMetadata": {
-    "windowsTrayIdentity": true
+    "windowsTrayIdentity": false
   },
   "productName": "OpenWhispr",
   "protocols": {
@@ -158,8 +158,6 @@
     "hardenedRuntime": true,
     "entitlements": "resources/mac/entitlements.mac.plist",
     "entitlementsInherit": "resources/mac/entitlements.mac.plist",
-    "identity": "Gizmo Labs Inc. (T832773L2J)",
-    "notarize": true,
     "extraResources": [
       {
         "from": "src/assets/Assets.car",
@@ -179,13 +177,7 @@
   "win": {
     "target": ["nsis"],
     "icon": "src/assets/icon.ico",
-    "forceCodeSigning": true,
-    "azureSignOptions": {
-      "endpoint": "https://eus.codesigning.azure.net/",
-      "certificateProfileName": "openwhispr-release",
-      "codeSigningAccountName": "OpenWhispr",
-      "publisherName": "CN=Gizmo Labs Inc., O=Gizmo Labs Inc., L=Wilmington, S=Delaware, C=US"
-    },
+    "forceCodeSigning": false,
     "extraResources": [
       {
         "from": "resources/bin/nircmd.exe",
